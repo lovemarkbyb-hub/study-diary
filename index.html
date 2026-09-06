@@ -521,6 +521,33 @@
     white-space:nowrap;
   }
 
+  /* monthly notes collection */
+  .month-notes-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .month-note-item{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+    background:var(--surface-2);
+  }
+  .month-note-date{
+    display:block;
+    font-size:12px;
+    color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;
+    margin-bottom:6px;
+  }
+  .month-note-text{
+    margin:0;
+    font-size:14px;
+    line-height:1.6;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+
   .foot-note{
     text-align:center;
     font-size:12px;
@@ -753,6 +780,13 @@
     <div class="history-list" id="historyList"></div>
   </section>
 
+  <section class="card">
+    <div class="card-head">
+      <h2>이번 달 메모 모아보기</h2>
+    </div>
+    <div class="month-notes-list" id="monthNotesList"></div>
+  </section>
+
   <p class="foot-note">기록은 클라우드에 저장되어 폰, 태블릿, PC 등 어떤 기기에서 열어도 같은 내용을 볼 수 있어요.</p>
 
 </div>
@@ -900,6 +934,7 @@
     var totals = {};
     SUBJECTS.forEach(function(s){ totals[s.key] = 0; });
     var grandTotal = 0;
+    var notes = [];
     snap.forEach(function(doc){
       var data = doc.data();
       var tasks = Array.isArray(data.tasks) ? data.tasks : [];
@@ -910,8 +945,12 @@
         totals[key] += mins;
         grandTotal += mins;
       });
+      if (data.notes && data.notes.trim()) {
+        notes.push({ date: new Date(doc.id+"T00:00:00"), text: data.notes });
+      }
     });
-    return { totals: totals, grandTotal: grandTotal };
+    notes.sort(function(a,b){ return b.date - a.date; });
+    return { totals: totals, grandTotal: grandTotal, notes: notes };
   }
 
   // ---- rendering ----
@@ -1115,6 +1154,7 @@
       errP.className = "history-empty";
       errP.textContent = "이번 달 기록을 불러오지 못했어요.";
       wrap.appendChild(errP);
+      renderMonthNotes(null);
       return;
     }
 
@@ -1130,6 +1170,7 @@
       p.className = "history-empty";
       p.textContent = "이번 달 기록된 공부 시간이 아직 없어요.";
       wrap.appendChild(p);
+      renderMonthNotes(result.notes);
       return;
     }
 
@@ -1162,6 +1203,40 @@
       row.appendChild(bar);
       row.appendChild(mins);
       wrap.appendChild(row);
+    });
+
+    renderMonthNotes(result.notes);
+  }
+
+  function renderMonthNotes(notes){
+    var wrap = document.getElementById("monthNotesList");
+    wrap.innerHTML = "";
+    if (notes === null) {
+      var errP = document.createElement("p");
+      errP.className = "history-empty";
+      errP.textContent = "이번 달 메모를 불러오지 못했어요.";
+      wrap.appendChild(errP);
+      return;
+    }
+    if (!notes.length) {
+      var p = document.createElement("p");
+      p.className = "history-empty";
+      p.textContent = "이번 달에 작성한 메모가 아직 없어요.";
+      wrap.appendChild(p);
+      return;
+    }
+    notes.forEach(function(entry){
+      var item = document.createElement("div");
+      item.className = "month-note-item";
+      var dateEl = document.createElement("span");
+      dateEl.className = "month-note-date";
+      dateEl.textContent = new Intl.DateTimeFormat("ko-KR", { month:"long", day:"numeric", weekday:"short" }).format(entry.date);
+      var textEl = document.createElement("p");
+      textEl.className = "month-note-text";
+      textEl.textContent = entry.text;
+      item.appendChild(dateEl);
+      item.appendChild(textEl);
+      wrap.appendChild(item);
     });
   }
 
